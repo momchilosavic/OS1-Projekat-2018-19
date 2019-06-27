@@ -1,7 +1,7 @@
 //===========================================================================//
 //   Project: Projekat iz Operativnih sistema 1
 //   File:    user.h
-//   Date:    Jun 2018
+//   Date:    Jun 2019
 //   Parametri za pokretanje:
 //        arg[1] - velicina bafera
 //        arg[2] - Broj niti

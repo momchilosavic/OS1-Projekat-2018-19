@@ -19,6 +19,7 @@ class Kernel {
 		static volatile int alwaysTrue;
 		static volatile int switch_on_demand;
 		static volatile int lock;
+		static volatile int switch_after_lock;
 };
 
 class IdleThread : Thread{

@@ -11,6 +11,7 @@ PCB* Kernel::idle = 0;
 volatile int Kernel::lock = 0;
 volatile int Kernel::alwaysTrue = 1;
 volatile int Kernel::switch_on_demand = 0;
+volatile int Kernel::switch_after_lock = 0;
 
 /* *** IDLE THREAD *** */
 

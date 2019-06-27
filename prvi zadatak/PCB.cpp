@@ -13,9 +13,9 @@ PCB::PCB(StackSize stackSize, Time timeSlice, Thread* myThread){
 	this->myStackSize = stackSize;
 	this->myTimeSlice = timeSlice;
 	if(timeSlice > 0)
-		this->isLimited = 0;
-	else
 		this->isLimited = 1;
+	else
+		this->isLimited = 0;
 	this->myThread = myThread;
 
 	this->myState = CREATED;

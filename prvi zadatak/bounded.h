@@ -1,7 +1,7 @@
 //===========================================================================//
 //   Project: Projekat iz Operativnih sistema 1
 //   File:    bounded.h
-//   Date:    Jun 2018
+//   Date:    Jun 2019
 //   Opis:		Kruzni ograniceni bafer sa sinhronizacijom; 
 //						
 //===========================================================================//
@@ -11,7 +11,7 @@
 
 
 
-#include <semaphor.h>
+#include "semaphor.h"
 
 
 

@@ -71,16 +71,20 @@ void interrupt Timer::timer(...){
 			if(KernelSem::list[s] && KernelSem::list[s]->blocked)
 				KernelSem::list[s]->blocked->notify(s);
 		asm int 0x60;
-		if(Kernel::lock == 0)
+		if(counter > 0)
 			counter--;
 	}
 
 	if(Kernel::lock == 1){
-		Kernel::switch_on_demand = 1;
+		if((Kernel::running->isLimited && counter == 0) || Kernel::switch_on_demand == 1)
+			Kernel::switch_after_lock = 1;
 		return;
 	}
 
-	if(Kernel::switch_on_demand == 1 || counter == 0){
+	//if(Kernel::switch_after_lock == 1)
+		//Kernel::switch_on_demand = 1;
+
+	if(Kernel::switch_on_demand == 1 || (Kernel::running->isLimited && counter == 0)){
 
 #ifndef BCC_BLOCK_IGNORE
 		asm{

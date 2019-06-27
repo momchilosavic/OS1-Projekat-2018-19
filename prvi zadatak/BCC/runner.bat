@@ -1,3 +1,3 @@
-set PathName="C:\Users\OS1\workspace\proj\BCC"
+set PathName="C:\Users\OS1\workspace\os1\BCC"
 cd %PathName%
-proj.exe 15 15 15
+os1.exe 50 19 4
