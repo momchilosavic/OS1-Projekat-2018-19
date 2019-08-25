@@ -2,6 +2,8 @@
 
 #include "IVTEntry.h"
 #include <dos.h>
+#include "Kernel.h"
+#include <stdio.h>
 
 IVTEntry* IVTEntry::entries[256]={0};
 
@@ -22,6 +24,7 @@ IVTEntry::~IVTEntry(){
 }
 
 void IVTEntry::signal(){
-	if(kernelEv)
+	if(kernelEv){
 		kernelEv->signal();
+	}
 }

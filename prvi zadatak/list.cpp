@@ -10,6 +10,10 @@ List::List() : head(0), headPreemptive(0), tail(0), tailNonPreemptive(0), counte
 List::~List(){
 	while(head)
 		popFirst();
+	head = 0;
+	headPreemptive = 0;
+	tail = 0;
+	tailNonPreemptive = 0;
 }
 
 int List::count(){
@@ -122,7 +126,9 @@ PCB* List::popFirst(){
 
 	counter--;
 	ret->pcb->isPreempted = 1;
-	return ret->pcb;
+	PCB* r = ret->pcb;
+	delete ret;
+	return r;
 }
 
 void List::notify(int id){
@@ -135,7 +141,7 @@ void List::notify(int id){
 	while(headPreemptive->sleepTime == 0){
 		Scheduler::put(headPreemptive->pcb);
 		headPreemptive->pcb->myState = READY;
-		KernelSem::list[id]->value += 1;
+		(KernelSem::list->find(id))->value += 1;
 		headPreemptive->pcb->isPreempted = 0;
 		headPreemptive = headPreemptive->next;
 		if(tailNonPreemptive == 0)
@@ -167,3 +173,5 @@ Element::~Element(){
 	this->sleepTime = 0;
 	next = 0;
 }
+
+

@@ -1,7 +1,7 @@
 //===========================================================================//
 //   Project: Projekat iz Operativnih sistema 1
 //   File:    bounded.cpp
-//   Date:    Jun 2018
+//   Date:    Jun 2019
 //===========================================================================//
 #include "bounded.h"
 
@@ -27,8 +27,8 @@ int BoundedBuffer::append (char d) {
 	mutexa.wait(0);
 		buffer[tail] = d;
 		tail = (tail+1)%Size;
-	mutexa.signal(0);
-	itemAvailable.signal(0);
+	mutexa.signal();
+	itemAvailable.signal();
 	return 0;
 }
 
@@ -37,7 +37,7 @@ char BoundedBuffer::take () {
 	mutext.wait(0);
 		char d = buffer[head];
 		head = (head+1)%Size;
-	mutext.signal(0);
-	spaceAvailable.signal(0);
+	mutext.signal();
+	spaceAvailable.signal();
 	return d;
 }

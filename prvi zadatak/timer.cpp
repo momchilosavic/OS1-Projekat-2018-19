@@ -9,7 +9,8 @@
 #include "KernelS.h"
 #include "KernelE.h"
 #include "IVTEntry.h"
-
+#include "PCB.h"
+#include "user.h"
 #include <stdio.h>
 
 extern void tick();
@@ -21,12 +22,14 @@ void Timer::inic(){
 #ifndef BCC_BLOCK_IGNORE
 	LOCK
 #endif
-	Kernel::loader = new PCB(0, 2, 0);
+	Kernel::loader = new PCB(4096, 2, 0);
+	Kernel::loader->createStack();
 	Kernel::loader->myState = RUNNING;
+
+	Kernel::idleThread = new IdleThread();
+	Kernel::idleThread->start();
+
 	Kernel::running = Kernel::loader;
-	Kernel::idleThread = (Thread*)new IdleThread();
-	Kernel::idle = new PCB(32, 1, Kernel::idleThread);
-	Kernel::idle->createStack();
 #ifndef BCC_BLOCK_IGNORE
 	setvect(0x60, getvect(0x08));
 	setvect(0x08, timer);
@@ -44,18 +47,12 @@ void Timer::restore(){
 	delete Kernel::idleThread;
 
 	int i;
-	for(i = 0; i < PCB::listSize; i++)
-		delete PCB::list[i];
-	delete[] PCB::list;
+	delete PCB::list;
 
-	for(i = 0; i < KernelSem::listSize; i++)
-		delete KernelSem::list[i];
-	delete[] KernelSem::list;
+	delete KernelSem::list;
 
-	for(i = 0; i < KernelEv::listSize; i++)
-		delete KernelEv::list[i];
-		delete IVTEntry::entries[i];
-	delete[] KernelEv::list;
+	delete KernelEv::list;
+	delete[] IVTEntry::entries;
 #ifndef BCC_BLOCK_IGNORE
 	UNLOCK
 #endif
@@ -67,20 +64,22 @@ unsigned int tbp;
 void interrupt Timer::timer(...){
 	if(Kernel::switch_on_demand == 0){
 		tick();
-		for(int s = 0; s < KernelSem::listSize; s++)
-			if(KernelSem::list[s] && KernelSem::list[s]->blocked)
-				KernelSem::list[s]->blocked->notify(s);
+		for(int s = 0; s < KernelSem::list->count(); s++)
+			if(KernelSem::list->find(s) && KernelSem::list->find(s)->blocked){
+				KernelSem::list->find(s)->blocked->notify(s);
+			}
 		asm int 0x60;
-		if(Kernel::lock == 0)
+		if(counter > 0)
 			counter--;
 	}
 
 	if(Kernel::lock == 1){
-		Kernel::switch_on_demand = 1;
+		if((Kernel::running->isLimited && counter == 0) || Kernel::switch_on_demand == 1)
+			Kernel::switch_after_lock = 1;
 		return;
 	}
 
-	if(Kernel::switch_on_demand == 1 || counter == 0){
+	if(Kernel::switch_on_demand == 1 || (Kernel::running->isLimited && counter == 0)){
 
 #ifndef BCC_BLOCK_IGNORE
 		asm{
@@ -93,18 +92,14 @@ void interrupt Timer::timer(...){
 		Kernel::running->ss = tss;
 		Kernel::running->bp = tbp;
 
-		//printf("\n==========\nSTARA NIT: %i\nSTATUS: %i\n============\n", Kernel::running->myId, Kernel::running->myState);
-
-		if(Kernel::running->myState == RUNNING && Kernel::running != Kernel::idle){
+		if(Kernel::running->myState == RUNNING){
 			Kernel::running->myState = READY;
 			Scheduler::put(Kernel::running);
 		}
-		if((Kernel::running = Scheduler::get()) == 0)
-			Kernel::running = Kernel::idle;
+		Kernel::running = Scheduler::get();
 		Kernel::running->myState = RUNNING;
 		counter = Kernel::running->myTimeSlice;
 
-		//printf("\n==========\nNOVA NIT: %i\n\tBROJAC: %i\n============\n", Kernel::running->myId, counter);
 
 		tsp = Kernel::running->sp;
 		tss = Kernel::running->ss;

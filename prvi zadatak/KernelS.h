@@ -4,6 +4,7 @@
 #define _KERNELS_H_
 
 #include "list.h"
+#include "PCBList.h"
 
 class KernelSem{
 	public:
@@ -17,8 +18,7 @@ class KernelSem{
 		int signal(int n = 0);
 		int val () const; 
 
-		static KernelSem** list;
-		static unsigned listSize;
+		static KernelSemList* list;
 
 		List* blocked;
 

@@ -9,51 +9,42 @@
 #include <stdio.h>
 
 unsigned KernelSem::lastID = 0;
-unsigned KernelSem::listSize = 1;
-KernelSem** KernelSem::list = new KernelSem*[1];
+
+KernelSemList* KernelSem::list = new KernelSemList();
 
 KernelSem::KernelSem(int init) : value(init){
 	blocked = new List();
-	Kernel::lock = 1;
 	id = ++lastID;
-	if(id > KernelSem::listSize){
+	/*if(id > KernelSem::listSize){
 			KernelSem::listSize <<= 1;
 			KernelSem::list = expandList(KernelSem::list, KernelSem::listSize);
-	}
-	Kernel::lock = 0;
-	KernelSem::list[id - 1] = this;
-	if(Kernel::switch_on_demand == 1)
-		dispatch();
-	////////////////////////////////////////////
-	//Kernel::lock = 1;
+	}*/
+	KernelSem::list->add(this);
+
 	//printf("\nSEMAFOR USPESNO KREIRAN\tID:%i\tVAL: %i",id, value);
-	//Kernel::lock = 0;
-	////////////////////////////////////////////
 }
 
 KernelSem::~KernelSem(){
+	signal(value);
 	delete blocked;
 	blocked = 0;
 	value = 0;
-	///////////////////////////////////////////
-	//Kernel::lock = 1;
+
+	KernelSem::list->remove(this);
 	//printf("\nSEMAFOR USPESNO OBRISAN\tID:%i\tVAL: %i",id, value);
-	//Kernel::lock = 0;
-	//////////////////////////////////////////
 }
 
 int KernelSem::signal(int n){
 	if(n < 0)
 		return n;
 	if(n == 0){
-		Kernel::lock = 1;
+		//printf("\nTHREAD ID: %d SIGNALED ON SEMAPHORE: %d\n", Thread::getRunningId(), id);
 		if(value++ < 0)
 			deblock();
-		Kernel::lock = 0;
 		return 0;
 	}
 	else{
-		Kernel::lock = 1;
+		//printf("\nTHREAD ID: %d SIGNALED ON SEMAPHORE: %d\n", Thread::getRunningId(), id);
 		for(int i = 0; i < n; i++){
 			if(value++ < 0)
 				deblock();
@@ -63,20 +54,15 @@ int KernelSem::signal(int n){
 			ret = n - value;
 		else
 			ret = n;
-		Kernel::lock = 0;
 		return ret;
 	}
 }
 
 int KernelSem::wait(unsigned maxTimeToWait){
-	Kernel::lock = 1;
-	//////////////////////////////////////////
-		//printf("\nSEMAFOR USPESNO ZAUSTAVLJEN\tID:%i\tVAL: %i", id,value);
-		////////////////////////////////////////
+	//printf("\nTHREAD ID: %d WAIT ON SEMAPHORE: %d\n", Thread::getRunningId(), id);
 	if(--value < 0)
 		block(maxTimeToWait);
 	int ret = Kernel::running->isPreempted;
-	Kernel::lock = 0;
 	return ret;
 }
 
@@ -85,19 +71,17 @@ int KernelSem::val() const{
 }
 
 void KernelSem::block(unsigned maxTimeToWait){
-	////////////////////////
-	//printf("\n\t\tBLOCK");
+	//printf("\n--- PCB: %d BLOCKED ON SEMAPHORE: %d ---\n", Thread::getRunningId(), id);
 	Kernel::running->myState = BLOCKED;
 	blocked->add(Kernel::running, maxTimeToWait);
 	dispatch();
 }
 
 void KernelSem::deblock(){
-	///////////////////
-	//printf("\n\t\tDEBLOCK");
 	PCB* temp = blocked->popFirst();
 	temp->myState = READY;
 	Scheduler::put(temp);
+	//printf("\n--- PCB: %d DEBLOCKED ON SEMAPHORE: %d ---\n", temp->myId, id);
 }
 
 KernelSem** KernelSem::expandList(KernelSem** oldList, unsigned size){

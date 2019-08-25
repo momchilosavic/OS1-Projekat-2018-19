@@ -9,23 +9,26 @@
 
 extern void tick();
 
+
+class IdleThread : public Thread{
+public:
+	IdleThread();
+	~IdleThread();
+	void run();
+};
+
+
 class Kernel {
 	public:
 		static PCB* running;
 		static PCB* loader;
 		static PCB* idle;
-		static Thread* idleThread;
+		static IdleThread* idleThread;
 
 		static volatile int alwaysTrue;
 		static volatile int switch_on_demand;
 		static volatile int lock;
-};
-
-class IdleThread : Thread{
-public:
-	IdleThread();
-	~IdleThread();
-	void run();
+		static volatile int switch_after_lock;
 };
 
 #endif

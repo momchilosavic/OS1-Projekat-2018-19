@@ -4,33 +4,35 @@
 #include "Kernel.h"
 #include "SCHEDULE.h"
 #include <dos.h>
+#include <STDIO.H>
 
-unsigned PCB::listSize = 4;
-PCB** PCB::list =  new PCB*[4];
+/*unsigned PCB::listSize = 4;
+PCB** PCB::list =  new PCB*[4];*/
+PCBList* PCB::list = new PCBList();
 int PCB::lastId = 0;
+/////
+volatile unsigned PCB::activePCBs = 0;
+////
 
 PCB::PCB(StackSize stackSize, Time timeSlice, Thread* myThread){
 	this->myStackSize = stackSize;
 	this->myTimeSlice = timeSlice;
 	if(timeSlice > 0)
-		this->isLimited = 0;
-	else
 		this->isLimited = 1;
+	else
+		this->isLimited = 0;
 	this->myThread = myThread;
 
 	this->myState = CREATED;
 
-	Kernel::lock = 1;
 	this->myId = ++PCB::lastId;
-	if(myId > PCB::listSize){
+	PCB::list->add(this);
+	/*if(myId > PCB::listSize){
 		PCB::listSize <<= 1;
 		PCB::list = PCB::expandList(PCB::list, PCB::listSize);
-	}
-	Kernel::lock = 0;
-	if(Kernel::switch_on_demand == 1)
-		dispatch();
-	PCB::list[this->myId-1] = this;
-
+	}*/
+	//printf("\nPCB CREATED: %d\n", myId);
+	//PCB::list[this->myId-1] = this;
 	this->waitingToComplete = new List();
 
 	this->myStack = 0;
@@ -41,13 +43,24 @@ PCB::PCB(StackSize stackSize, Time timeSlice, Thread* myThread){
 }
 
 PCB::~PCB(){
+	Kernel::lock = 1;
 	this->myThread = 0;
 	if(this->myStack){
-		delete this->myStack;
+		delete[] this->myStack;
+		/*Kernel::lock = 1;
+			printf("\n\tSTACK SUCCESSFULLY DELETED:\tID: %d\tSIZE: %d", myId, myStackSize);
+			Kernel::lock = 0;
+			if(Kernel::switch_after_lock)
+				dispatch();*/
 		this->myStack = 0;
 	}
+	PCB::list->remove(this);
 	delete this->waitingToComplete;
 	this->waitingToComplete = 0;
+	//printf("\nPCB REMOVED: %d\n", this->myId);
+	Kernel::lock = 0;
+	if(Kernel::switch_after_lock)
+		dispatch();
 }
 
 void PCB::createStack(){
@@ -70,6 +83,8 @@ void PCB::createStack(){
 	this->sp = FP_OFF(this->myStack + this->myStackSize - 16);
 	this->bp = this->sp;
 #endif
+
+		//printf("\n\tSTACK SUCCESSFULLY CREATED:\tID: %d\tSIZE: %d", myId, myStackSize);
 }
 
 PCB** PCB::expandList(PCB** oldList, unsigned size){
@@ -91,13 +106,19 @@ PCB** PCB::expandList(PCB** oldList, unsigned size){
 void PCB::wrapper(){
 	Kernel::running->myThread->run();
 
+	Kernel::lock = 1;
+	PCB::activePCBs--;
+	////////////////
+		//printf("\n*** THREAD DONE: %d ***\n\t*** ACTIVE THREADS:%d ***\n", Thread::getRunningId(), PCB::activePCBs);
+		//////////////////
 	PCB* wakeUp;
 	while(wakeUp = Kernel::running->waitingToComplete->popFirst()){
 		wakeUp->myState = READY;
 		Scheduler::put(wakeUp);
+		//printf("\n\t\tPCB %d WOKE UP PCB %d\n", Thread::getRunningId(), wakeUp->myId);
 	}
 
 	Kernel::running->myState = DONE;
-
+	Kernel::lock = 0;
 	dispatch();
 }

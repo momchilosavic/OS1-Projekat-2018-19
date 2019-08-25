@@ -5,6 +5,7 @@
 
 #include "thread.h"
 #include "list.h"
+#include "PCBList.h"
 
 typedef void (*SignalHandler)();
 typedef unsigned SignalId;
@@ -24,15 +25,19 @@ class PCB{
 		int myId;
 		State myState;
 
-		static unsigned listSize;
-		static PCB** list;
+
 		List* waitingToComplete;
+		static PCBList* list;
 
 		unsigned isPreempted;
 
 		PCB(StackSize stackSize, Time timeSlice, Thread* myThread);
 		~PCB();
 		void createStack();
+
+		////////
+		volatile static unsigned activePCBs;
+		///////
 	protected:
 		static void wrapper();
 		

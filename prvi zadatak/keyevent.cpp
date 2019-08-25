@@ -1,20 +1,20 @@
 //===========================================================================//
 //   Project: Projekat iz Operativnih sistema 1
 //   File:    keyevent.cpp
-//   Date:    Jun 2018
+//   Date:    Jun 2019
 //===========================================================================//
 #include "keyevent.h"
 
 #include <iostream.h>
 #include <dos.h>
 
-#include <event.h>
 #include "bounded.h"
 #include "intLock.h"
 #include "user.h"
+#include "Event.h"
 
 #include "IVTEntry.h"
-PREPAREENTRY(9, 0);
+PREPAREENTRY(9,0);
   
 //---------------------------------------------------------------------------//
 //  Podeseno za qwerty tastature

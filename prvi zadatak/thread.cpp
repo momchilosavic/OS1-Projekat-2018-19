@@ -11,46 +11,50 @@
 #include <stdio.h>
 
 Thread::Thread(StackSize stackSize, Time timeSlice){
+	Kernel::lock = 1;
 	myPCB = new PCB(stackSize, timeSlice, this);
-
-	////////////////////////////////////////////////
-	//Kernel::lock=1;
-	//printf("\n\tNIT USPESNO KREIRANA: %i\tstackSize: %i\ttimeSlice: %u", myPCB->myId,stackSize, myPCB->isLimited);
-	//Kernel::lock=0;
-	//////////////////////////////////////////////////
+	Kernel::lock = 0;
+	if(Kernel::switch_after_lock)
+		dispatch();
 }
 
 Thread::~Thread(){
 }
 
 void Thread::start(){
-	if(myPCB->myState != CREATED)
+	Kernel::lock = 1;
+	if(myPCB->myState != CREATED){
+		Kernel::lock = 0;
+		if(Kernel::switch_after_lock)
+			dispatch();
 		return;
+	}
 	
 	myPCB->createStack();
 	myPCB->myState = READY;
 	Scheduler::put(myPCB);
 
-	//////////////////////////////////////
-	//Kernel::lock=1;
-	//printf("\n\tNIT USPESNO STARTOVANA\tPCB: %i", myPCB->id);
-	//Kernel::lock=0;
-	/////////////////////////////////////
+	PCB::activePCBs++;
+//		printf("\nACTIVE THREADS: %d\n", PCB::activePCBs);
+	Kernel::lock = 0;
+	if(Kernel::switch_after_lock)
+		dispatch();
+
 }
 
 void Thread::waitToComplete(){
 	Kernel::lock = 1;
 	if(this->myPCB == Kernel::running || this->myPCB->myState == DONE || this->myPCB->myState == CREATED || this->myPCB == Kernel::idle){
 		Kernel::lock = 0;
+		if(Kernel::switch_after_lock)
+			dispatch();
 		return;
 	}
 	
 	this->myPCB->waitingToComplete->add(Kernel::running);
 	Kernel::running->myState = BLOCKED;
 
-	/////////////////////////////////////////////////
-	//printf("\n\tNIT CEKA NA ZAVRSETAK\tPCB RUNNING: %i STATUS: %i\tPCB POZVANI: %i", Kernel::running->id, Kernel::running->state, myPCB->id);
-	/////////////////////////////////////////////
+	//printf("\n\tTHREAD %d WAITING ON THREAD %d\n", Thread::getRunningId(), getId());
 
 	Kernel::lock = 0;
 	dispatch();
@@ -67,19 +71,38 @@ ID Thread::getRunningId(){
 }
 
 Thread* Thread::getThreadById(ID id){
-	if(id <= PCB::lastId && PCB::list[id-1] != 0)
-		return PCB::list[id-1]->myThread;
-	return 0;
+	Thread* ret = 0;
+	Kernel::lock = 1;
+	PCB* r = PCB::list->find(id);
+	if(r)
+		ret = r->myThread;
+	Kernel::lock = 0;
+	if(Kernel::switch_after_lock)
+		dispatch();
+	return ret;
 }
+/*Thread* Thread::getThreadById(ID id){
+	Thread* ret = 0;
+	Kernel::lock = 1;
+	if(id <= PCB::lastId && id > 0 && PCB::list[id-1] != 0){
+		ret = PCB::list[id-1]->myThread;
+		Kernel::lock = 0;
+		if(Kernel::switch_after_lock)
+			dispatch();
+		return ret;
+	}
+	Kernel::lock = 0;
+	if(Kernel::switch_after_lock)
+		dispatch();
+	return 0;
+}*/
 
 void dispatch(){
 	Kernel::lock = 1;
-
-	///////////////////////////////////////////////////
-	//printf("\n\tPOZVANA PROMENA KONTEKSTA\t RUNNING PCB: %i", Kernel::running->id);
-	///////////////////////////////////////////////////////////////////////////
-
-	Kernel::switch_on_demand = 1;
+		Kernel::switch_after_lock = 0;
+		Kernel::switch_on_demand = 1;
 	Kernel::lock = 0;
-	Timer::timer();
+#ifndef BCC_BLOCK_IGNORE
+	asm int 0x08;
+#endif
 }

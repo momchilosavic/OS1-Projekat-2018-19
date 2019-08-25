@@ -5,6 +5,7 @@
 
 #include "PCB.h"
 #include "Event.h"
+#include "PCBList.h"
 
 class KernelEv{
 	public:
@@ -18,7 +19,7 @@ class KernelEv{
 		void signal();
 
 		static const unsigned listSize;
-		static KernelEv** list;
+		static KernelEvList* list;
 
 	private:
 		PCB* owner;

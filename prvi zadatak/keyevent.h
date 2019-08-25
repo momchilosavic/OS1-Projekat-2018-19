@@ -1,7 +1,7 @@
 //===========================================================================//
 //   Project: Projekat iz Operativnih sistema 1
 //   File:    keyevent.h
-//   Date:    Jun 2018
+//   Date:    Jun 2019
 //===========================================================================//
 
 #ifndef _OS1_KEYBOARD_EVENT_
@@ -18,6 +18,7 @@ public:
 
 	KeyboardEvent (BoundedBuffer*);  
 	virtual ~KeyboardEvent () {waitToComplete();}
+	Thread* clone() const { return new KeyboardEvent(myBuffer); };
 protected:
 
 	virtual void run();
